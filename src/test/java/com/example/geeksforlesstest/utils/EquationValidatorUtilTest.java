@@ -4,8 +4,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-class EquationValidatorUtilTest {
+import java.text.ParseException;
 
+class EquationValidatorUtilTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"2*x + (5 + 6) = 10",
@@ -48,5 +49,18 @@ class EquationValidatorUtilTest {
     @ValueSource(strings = {"2+2=4"})
     void equations_without_root_return_false(String equations) {
         Assertions.assertFalse(EquationValidatorUtil.isEquationValid(equations));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"-0.5", "-65/12", "0", "1.4"})
+    void valid_fraction_converts_to_double_value(String fract) throws ParseException {
+        var doubleValue = EquationValidatorUtil.fractionToDouble(fract);
+        Assertions.assertEquals(Double.class, doubleValue.getClass());
+    }
+
+    @ParameterizedTest
+        @ValueSource(strings = {"+32//3"})
+    void invalid_fraction_throws_error(String frac) {
+        Assertions.assertThrows(ParseException.class, () -> EquationValidatorUtil.fractionToDouble(frac));
     }
 }
