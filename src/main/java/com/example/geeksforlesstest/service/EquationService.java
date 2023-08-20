@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -34,12 +35,7 @@ public class EquationService {
 
         var equations = equation.split("=");
         var values = new ArrayList<Double>();
-        var doubleRootValue = 0d;
-        try {
-            doubleRootValue = EquationValidatorUtil.fractionToDouble(root);
-        } catch (ParseException ex) {
-            throw new EquationException(String.format("invalid input for root: %s", root));
-        }
+        var doubleRootValue = convertStringToDouble(root);
 
         for (var e : equations) {
             var value = EquationEvaluatorUtil.evaluate(e, doubleRootValue);
@@ -53,6 +49,31 @@ public class EquationService {
         eq.setRoot(doubleRootValue);
 
         return eq;
+    }
+
+    public List<Equation> getAllEquationByRoot(String root) {
+        var doubleRootValue = convertStringToDouble(root);
+
+        return repository.findAllByRoot(doubleRootValue);
+    }
+
+    public List<Equation> getAllEquationByRootBetween(String root1, String root2) {
+        var doubleRootValue1 = convertStringToDouble(root1);
+        var doubleRootValue2 = convertStringToDouble(root2);
+
+        return repository.findAllByRootBetween(doubleRootValue1, doubleRootValue2);
+    }
+
+    public List<Equation> getAllEquationWithUniqueRoot() {
+        return repository.findAllUniqueRoot();
+    }
+
+    private double convertStringToDouble(String root) {
+        try {
+            return EquationValidatorUtil.fractionToDouble(root);
+        } catch (ParseException ex) {
+            throw new EquationException(String.format("invalid input for root: %s", root));
+        }
     }
 
 }

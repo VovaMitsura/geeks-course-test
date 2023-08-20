@@ -24,6 +24,11 @@ public class Equation {
         this.equation = equation;
     }
 
+    public Equation(String equation, Double root) {
+        this.equation = equation;
+        this.root = root;
+    }
+
     public Optional<Double> getRoot(){
         return Optional.ofNullable(root);
     }
