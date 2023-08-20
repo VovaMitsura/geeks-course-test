@@ -3,6 +3,8 @@ package com.example.geeksforlesstest.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.Optional;
+
 @NoArgsConstructor
 @Getter
 @Setter
@@ -20,5 +22,9 @@ public class Equation {
 
     public Equation(String equation) {
         this.equation = equation;
+    }
+
+    public Optional<Double> getRoot(){
+        return Optional.ofNullable(root);
     }
 }
