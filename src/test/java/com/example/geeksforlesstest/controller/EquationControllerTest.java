@@ -2,6 +2,7 @@ package com.example.geeksforlesstest.controller;
 
 import com.example.geeksforlesstest.GeeksforlessTestApplication;
 import com.example.geeksforlesstest.dto.EquationDTO;
+import com.example.geeksforlesstest.dto.EquationRootDTO;
 import com.example.geeksforlesstest.entity.Equation;
 import com.example.geeksforlesstest.repository.EquationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,7 +17,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -105,13 +106,15 @@ class EquationControllerTest {
     @ParameterizedTest
     @MethodSource("addValidRoots")
     void valid_root_for_equation_updates_entity(String equation, Double root) throws Exception {
-        var builder = new StringBuilder();
-        var request = builder.append("?equation=").append(equation).append("&root=").append(root).toString();
+        var request = new EquationRootDTO();
+        request.setRoot(String.valueOf(root));
+        request.setEquation(equation);
 
         var initialEntity = equationRepository.saveAndFlush(new Equation(equation));
 
-        var mockMvcResult = mockMvc.perform(MockMvcRequestBuilders.patch(URL + request)
-                        .contentType(MediaType.APPLICATION_JSON))
+        var mockMvcResult = mockMvc.perform(MockMvcRequestBuilders.patch(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(MockMvcResultMatchers.status().isAccepted())
                 .andReturn();
 
@@ -132,11 +135,13 @@ class EquationControllerTest {
     @ParameterizedTest
     @MethodSource("addValidRoots")
     void update_not_existing_equation_throw_exception(String equation, Double root) throws Exception {
-        var builder = new StringBuilder();
-        var request = builder.append("?equation=").append(equation).append("&root=").append(root).toString();
+        var request = new EquationRootDTO();
+        request.setRoot(String.valueOf(root));
+        request.setEquation(equation);
 
-        var mockMvcResult = mockMvc.perform(MockMvcRequestBuilders.patch(URL + request)
-                        .contentType(MediaType.APPLICATION_JSON))
+        var mockMvcResult = mockMvc.perform(MockMvcRequestBuilders.patch(URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(MockMvcResultMatchers.status().isNotFound())
                 .andReturn();
 
@@ -146,10 +151,80 @@ class EquationControllerTest {
         Assertions.assertEquals(String.format("Equation: %s not found", equation), exception.getErrorMessage());
     }
 
+    @Test
+    void get_unique_equation_by_root_return_2_unique_values() throws Exception {
+        equationRepository.saveAllAndFlush(equations());
+
+        var mockMvcResult = mockMvc.perform(MockMvcRequestBuilders.get(URL + "/unique")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andReturn();
+
+        var response = List.of(objectMapper.readValue(mockMvcResult.getResponse().getContentAsString(),
+                Equation[].class));
+        var uniqueValues = equationRepository.findAllUniqueRoot();
+
+        Assertions.assertEquals(uniqueValues.size(), response.size());
+        Assertions.assertNotEquals(equations(), response);
+        Assertions.assertEquals(2, response.size());
+        Assertions.assertEquals(uniqueValues.get(0), response.get(0));
+        Assertions.assertEquals(uniqueValues.get(uniqueValues.size() - 1), response.get(response.size() - 1));
+
+        equationRepository.deleteAll();
+    }
+
+    @Test
+    void get_all_equation_with_same_root_return_two_values() throws Exception {
+        equationRepository.saveAllAndFlush(equations());
+
+        var mockMvcResult = mockMvc.perform(MockMvcRequestBuilders.get(URL + "?root1=-0.5d")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andReturn();
+
+        var response = List.of(objectMapper.readValue(mockMvcResult.getResponse().getContentAsString(),
+                Equation[].class));
+        var equationWithSameRoot = equationRepository.findAllByRoot(-0.5d);
+
+        Assertions.assertEquals(equationWithSameRoot.size(), response.size());
+        Assertions.assertEquals(2, response.size());
+        Assertions.assertEquals(Optional.of(-0.5d), response.get(0).getRoot());
+
+        equationRepository.deleteAll();
+    }
+
+    @Test
+    void get_all_equation_with_root_limited_return_3_values() throws Exception {
+        equationRepository.saveAllAndFlush(equations());
+
+        var mockMvcResult = mockMvc.perform(MockMvcRequestBuilders.get(URL + "?root1=-6d&root2=-0.1d")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andReturn();
+
+        var response = List.of(objectMapper.readValue(mockMvcResult.getResponse().getContentAsString(),
+                Equation[].class));
+        var equationWithSameRoot = equationRepository.findAllByRootBetween(-6d, -0.1d);
+
+        Assertions.assertEquals(equationWithSameRoot.size(), response.size());
+        Assertions.assertEquals(3, response.size());
+
+        equationRepository.deleteAll();
+    }
+
     private static Stream<Arguments> addValidRoots() {
         return Stream.of(
                 Arguments.of("2*x + (5 + 6) = 10", -0.5d),
                 Arguments.of("-1.3*5/x=1.2", -65 / 12d),
                 Arguments.of("2*x+5+x+5=10", 0d));
+    }
+
+    private static List<Equation> equations() {
+        return List.of(
+                new Equation("2*x + (5 + 6) = 10", -0.5d),
+                new Equation("-1.3*5/x=1.2", -65 / 12d),
+                new Equation("2*x+5+x+5=10", 0d),
+                new Equation("2*x=-1", -0.5d)
+        );
     }
 }
