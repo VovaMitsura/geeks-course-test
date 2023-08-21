@@ -24,6 +24,15 @@ x.
 
 8. Проект має бути завантажений у репозиторій GitHub та надано посилання для його отримання. Також допустимо надіслати архів із проектом.
 
+## Test Coverage
+
+The project includes comprehensive testing to ensure its functionality and reliability. The test coverage for the project is shown in the image below:
+
+![image](https://github.com/VovaMitsura/geeks-course-test/assets/95585344/e5a7d28f-b07b-48a5-bed1-aa1bf5fcde8d)
+
+Ensure that you maintain high test coverage to catch and prevent potential issues in the application.
+
+
 ## Notes
 
 - The project should be developed using Java 11 or 17.
@@ -32,9 +41,8 @@ x.
 - File storage can be used instead of databases for storing information about entered and edited equations.
 - A number is considered a root of an equation if substituting that number for all occurrences of 'x' in the equation results in a difference between the values of the left and right sides of the equation not exceeding 10^-9.
 
----
 
-#### How to Run manually
+### How to Run manually
 
 This application is packaged as a jar which has Tomcat 8 embedded. No Tomcat or JBoss installation is necessary.</br> You run it using the ```java -jar``` command.
 
