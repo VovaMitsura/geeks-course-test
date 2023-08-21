@@ -3,6 +3,10 @@ package com.example.geeksforlesstest.utils;
 import java.util.*;
 
 public class EquationEvaluatorUtil {
+
+    private EquationEvaluatorUtil() {
+    }
+
     public static Double evaluate(String expression, Double root) {
         var operators = new LinkedList<String>();
         var values = new LinkedList<Double>();
@@ -14,23 +18,26 @@ public class EquationEvaluatorUtil {
             String s = expInBrackets.substring(i, i + 1);
 
             switch (s) {
-                case "(" -> i = processRoundBrackets(expInBrackets, values, i, s, sum);
-                case "+", "*", "/" -> i = getI(expInBrackets, operators, values, i, s);
-                case "-" -> i = processNegativeSign(expInBrackets, operators, values, i, s);
+                case "(" -> i = processRoundBrackets(expInBrackets, values, i, sum);
+                case "+", "*", "/" -> i = processMathSigns(expInBrackets, operators, values, i, s);
+                case "-" -> {
+                    if (i >= 1 && Character.isDigit(expInBrackets.charAt(i - 1)))
+                        operators.add(s);
+                    else
+                        i = processNegativeSign(expInBrackets, operators, values, i, s);
+                }
                 case "|" -> {
                     int count = operators.size();
                     sum.push(values.poll());
                     while (count > 0) {
                         String op = operators.poll();
                         double val = sum.pop();
-                        if (op.equals("+"))
-                            val += values.poll();
-                        else if (op.equals("-"))
-                            val -= values.poll();
-                        else if (op.equals("*"))
-                            val *= values.poll();
-                        else if (op.equals("/"))
-                            val /= values.poll();
+                        switch (op) {
+                            case "+" -> val += values.poll();
+                            case "-" -> val -= values.poll();
+                            case "*" -> val *= values.poll();
+                            case "/" -> val /= values.poll();
+                        }
                         sum.push(val);
                         count--;
                     }
@@ -55,62 +62,58 @@ public class EquationEvaluatorUtil {
     private static int processRoundBrackets(String expInBrackets,
                                             Deque<Double> values,
                                             int i,
-                                            String s,
                                             Deque<Double> sum) {
 
         Queue<String> operators = new LinkedList<>();
         Queue<Double> bracketsValues = new LinkedList<>();
-        int substringIndex = countExpressionInBracketsLength(i, expInBrackets);
+        var substringIndex = countExpressionInBracketsLength(i, expInBrackets);
         var bracketsExpression = expInBrackets.substring(i, substringIndex + 1);
 
         for (i = 0; i < bracketsExpression.length(); i++) {
-            s = bracketsExpression.substring(i, i + 1);
+            String s = bracketsExpression.substring(i, i + 1);
 
             switch (s) {
-                case "(":
+                case "(" -> {
                     if (i == 0) break;
-                    i = processRoundBrackets(bracketsExpression, values, i, s, sum);
+                    i = processRoundBrackets(bracketsExpression, values, i, sum);
                     var el = values.getLast();
                     bracketsValues.add(el);
                     values.remove(el);
-                    break;
-                case "+":
-                    i = getI(bracketsExpression, operators, bracketsValues, i, s);
-                    break;
-                case "-":
-                    operators.add(s);
-                    break;
-                case "*":
-                    i = getI(bracketsExpression, operators, bracketsValues, i, s);
-                    break;
-                case "/":
-                    i = getI(bracketsExpression, operators, bracketsValues, i, s);
-                    break;
-                case ")":
+                }
+                case "+", "*", "/" -> i = processMathSigns(bracketsExpression, operators, bracketsValues, i, s);
+                case "-" -> {
+                    if (i > 1 && Character.isDigit(bracketsExpression.charAt(i - 1))) {
+                        operators.add(s);
+                    } else {
+                        i = processNegativeSign(bracketsExpression, operators, values, i, s);
+                        var el = values.getLast();
+                        bracketsValues.add(el);
+                        values.remove(el);
+                    }
+                }
+                case ")" -> {
                     int count = operators.size();
                     sum.push(bracketsValues.poll());
                     while (count > 0) {
                         String op = operators.poll();
                         double v = sum.pop();
                         if (op.equals("+"))
-                            v = bracketsValues.poll() + v;
+                            v += bracketsValues.poll();
                         else if (op.equals("-"))
-                            v = bracketsValues.poll() - v;
+                            v -= bracketsValues.poll();
                         else if (op.equals("*"))
-                            v = bracketsValues.poll() * v;
+                            v *= bracketsValues.poll();
                         else if (op.equals("/"))
-                            v = bracketsValues.poll() / v;
+                            v /= bracketsValues.poll();
                         sum.push(v);
                         count--;
                     }
-                    break;
-                default:
+                }
+                default -> {
                     var number = processNumber(bracketsExpression, s, i);
-
                     i = number.length() > 1 ? i + number.length() - 1 : i;
-
                     bracketsValues.add(Double.parseDouble(number));
-                    break;
+                }
             }
         }
 
@@ -120,7 +123,7 @@ public class EquationEvaluatorUtil {
 
     private static int countExpressionInBracketsLength(int i, String expInBrackets) {
 
-        int substringIndex = 0;
+        int substringIndex = i;
 
         var stack = new ArrayDeque<Integer>();
 
@@ -135,19 +138,11 @@ public class EquationEvaluatorUtil {
             }
         }
 
-        for (; i < expInBrackets.length(); i++) {
-            if (expInBrackets.charAt(i) != ')') {
-                continue;
-            }
-            substringIndex = i;
-            break;
-        }
-
         return substringIndex;
     }
 
-    private static int getI(String expInBrackets, Queue<String> operators, Queue<Double> values, int i, String s) {
-        if (expInBrackets.substring(i + 1, i + 2).equals("-")) {
+    private static int processMathSigns(String expInBrackets, Queue<String> operators, Queue<Double> values, int i, String s) {
+        if (expInBrackets.charAt(i + 1) == '-') {
             var startNegative = expInBrackets.substring(i + 1, i + 2);
             var number = processNumber(expInBrackets, startNegative, i + 1);
 
@@ -160,15 +155,16 @@ public class EquationEvaluatorUtil {
     }
 
     private static int processNegativeSign(String expInBrackets, Queue<String> operators, Queue<Double> values, int i, String s) {
-        if (Character.isDigit(expInBrackets.substring(i + 1, i + 2).charAt(0))) {
+        if (Character.isDigit(expInBrackets.charAt(i + 1))) {
             var startNegative = expInBrackets.substring(i, i + 1);
             var number = processNumber(expInBrackets, startNegative, i);
 
             i = number.length() > 1 ? i + number.length() : i;
 
             values.add(Double.parseDouble(number));
+            return i - 1;
         } else operators.add(s);
-        return i - 1;
+        return i;
     }
 
     private static String processNumber(String expression, String currentLetter, int iterator) {
